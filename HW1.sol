@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.0 <=0.8.22;
+pragma solidity >=0.8.0 <=0.8.21;
 
 contract ProductIdentification
 {
@@ -116,7 +116,7 @@ contract ProductDeposit
         _;
     }
 
-    function setProductIdentification(address _productIdentification) onlyAdmin() public 
+    function setProductIdentification(address _productIdentification) public 
     {
         productIdentification = _productIdentification;
     }
@@ -245,7 +245,7 @@ contract ProductStore
         }
     }
 
-    function buyProduct(uint _productId,uint _volume) public payable
+    function buyProduct(uint _productId,uint _volume) validBuy(_productId, _volume) public payable
     {
         productsStocks[_productId] -= _volume;
         uint price = productsPrices[_productId] * _volume;
