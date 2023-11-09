@@ -131,12 +131,13 @@ contract ProductDeposit
         maxDeposit = _max;
     }
 
-    modifier validDeposit(uint _productId, uint _volume)
+    modifier validDeposit(uint _productId, uint _quantity)
     {
-        uint reqTax = _volume * taxPerUnit;
-        require(msg.value >= reqTax, "Insufficient tax");
-        require(totalVolume + _volume <= maxDeposit, "Too much volume");
         ProductIdentification aux = ProductIdentification(productIdentification);
+        uint productVolume = aux.getProduct(_productId).volume;
+        uint reqTax = _quantity * taxPerUnit;
+        require(msg.value >= reqTax, "Insufficient tax");
+        require(totalVolume + _quantity * productVolume <= maxDeposit, "Too much volume");
         require(aux.getProductProducer(_productId) == msg.sender, "Unauthorized producer");
 
         _;
@@ -148,25 +149,29 @@ contract ProductDeposit
         }
     }
 
-    function depositProduct(uint _productId, uint _volume) validDeposit(_productId, _volume) payable external
+    function depositProduct(uint _productId, uint _quantity) validDeposit(_productId, _quantity) payable external
     {
-        deposits[_productId] += _volume;
-        totalVolume += _volume;
+        ProductIdentification aux = ProductIdentification(productIdentification);
+        uint productVolume = aux.getProduct(_productId).volume;
+        deposits[_productId] += _quantity;
+        totalVolume += _quantity * productVolume;
     }
 
-    modifier validWithdraw(uint _productId, uint _volume)
+    modifier validWithdraw(uint _productId, uint _quantity)
     {
-        require(deposits[_productId] >= _volume, "Insufficient volume");
         ProductIdentification aux = ProductIdentification(productIdentification);
+        require(deposits[_productId] >= _quantity , "Insufficient volume");
         address productProducer = aux.getProductProducer(_productId);
         require(productProducer == msg.sender || stores[productProducer] == msg.sender, "Unauthorized");
         _;
     }
 
-    function withdrawProduct(uint _productId, uint _volume) validWithdraw(_productId, _volume) external 
+    function withdrawProduct(uint _productId, uint _quantity) validWithdraw(_productId, _quantity) external 
     {
-        deposits[_productId] -= _volume;
-        totalVolume -= _volume;
+        ProductIdentification aux = ProductIdentification(productIdentification);
+        uint productVolume = aux.getProduct(_productId).volume;
+        deposits[_productId] -= _quantity;
+        totalVolume -= _quantity * productVolume;
     }
 
     function registerStore(address _store) external 
