@@ -133,7 +133,9 @@ contract ProductDeposit
 
     modifier validDeposit(uint _productId, uint _quantity)
     {
+        require (_quantity > 0, "Invalid quantity value");
         ProductIdentification aux = ProductIdentification(productIdentification);
+        require(aux.productExists(_productId), "Invalid product id");
         uint productVolume = aux.getProduct(_productId).volume;
         uint reqTax = _quantity * taxPerUnit;
         require(msg.value >= reqTax, "Insufficient tax");
@@ -159,8 +161,9 @@ contract ProductDeposit
 
     modifier validWithdraw(uint _productId, uint _quantity)
     {
-        ProductIdentification aux = ProductIdentification(productIdentification);
+        require (_quantity > 0, "Invalid quantity value");
         require(deposits[_productId] >= _quantity , "Insufficient volume");
+        ProductIdentification aux = ProductIdentification(productIdentification);
         address productProducer = aux.getProductProducer(_productId);
         require(productProducer == msg.sender || stores[productProducer] == msg.sender, "Unauthorized");
         _;
@@ -212,11 +215,20 @@ contract ProductStore
         aux.setProductIdentification(_productIdentificationAddress);
     }
 
-    function supplyStore(uint _productId, uint _volume) onlyAdmin() public 
+    modifier validSupply(uint _productId, uint _quantity)
+    {
+        ProductIdentification aux = ProductIdentification(productIdentificationAddress);
+        require(aux.productExists(_productId), "Invalid product id");
+        require(_quantity > 0, "Invalid quantity value");
+
+        _;
+    }
+
+    function supplyStore(uint _productId, uint _quantity) onlyAdmin() validSupply(_productId, _quantity) public 
     {
         ProductDeposit aux = ProductDeposit(depositAddress);
-        aux.withdrawProduct(_productId, _volume);
-        productsStocks[_productId] += _volume;
+        aux.withdrawProduct(_productId, _quantity);
+        productsStocks[_productId] += _quantity;
     }
 
     function setPrice(uint _productId, uint _price) onlyAdmin() public 
@@ -234,10 +246,11 @@ contract ProductStore
         return aux.productExists(_productId);
     }
 
-    modifier validBuy(uint _productId, uint _volume)
+    modifier validBuy(uint _productId, uint _quantity)
     {
-        require(productsStocks[_productId] >= _volume, "Insufficient volume");
-        uint price = productsPrices[_productId] * _volume;
+        require(_quantity > 0, "Invalid quantity value");
+        require(productsStocks[_productId] >= _quantity, "Insufficient volume");
+        uint price = productsPrices[_productId] * _quantity;
         require(msg.value >= price,"Insufficient funds");
 
         _;
@@ -250,10 +263,10 @@ contract ProductStore
         }
     }
 
-    function buyProduct(uint _productId,uint _volume) validBuy(_productId, _volume) public payable
+    function buyProduct(uint _productId,uint _quantity) validBuy(_productId, _quantity) public payable
     {
-        productsStocks[_productId] -= _volume;
-        uint price = productsPrices[_productId] * _volume;
+        productsStocks[_productId] -= _quantity;
+        uint price = productsPrices[_productId] * _quantity;
 
         ProductIdentification aux = ProductIdentification(productIdentificationAddress);
         address productProducer =  aux.getProductProducer(_productId);
